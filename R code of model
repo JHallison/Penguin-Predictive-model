@@ -1,0 +1,579 @@
+
+# Penguin Data Analysis
+
+## Library
+
+library(ggplot2)
+library(ggrepel)
+library(reshape2)
+library(dplyr)
+install.packages("GGally")
+library(GGally)
+library(cluster)
+install.packages("caret")
+library(caret)
+install.packages("randomForest")
+library(randomForest)
+
+
+penguin_data = read.table("penguins.csv", header=TRUE, sep = ",")
+
+
+#remove NA values
+
+penguin_data = na.omit(penguin_data)
+
+
+# Parsing ready for barplot analysis
+
+
+# Summarize the data to get the mean values for each species
+
+# Summarize all numerical columns by species
+penguins_summary = penguin_data %>%
+  group_by(species) %>%
+  summarise(across(where(is.numeric), mean, na.rm = TRUE))
+
+# remove average year column
+
+penguins_summary = penguins_summary[,-6]
+
+
+# Function to create the bar chart
+
+barplot_species = function(summary_table, y_axis)
+{
+
+ggplot_bar = ggplot(summary_table, aes(x = species, y = y_axis, fill = species)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Species") +
+  theme_minimal()
+
+return(ggplot_bar)
+}
+
+
+# Bill length barplot
+
+barplot_bl = barplot_species(penguins_summary, penguins_summary$bill_length_mm)
+barplot_bl
+
+
+# Bill depth barplot
+
+barplot_bd = barplot_species(penguins_summary, penguins_summary$bill_depth_mm)
+barplot_bd
+
+
+# Flipper length barplot
+
+barplot_fl = barplot_species(penguins_summary, penguins_summary$flipper_length_mm)
+barplot_fl
+
+
+# Body mass barplot
+
+barplot_bm = barplot_species(penguins_summary, penguins_summary$body_mass_g)
+barplot_bm
+
+
+# Faceted boxplot comparing how mass varies accross species and sex
+
+# melt penguin data
+
+# Melt the dataset to long format
+penguin_data.m = melt(penguin_data, id.vars = c("species", "sex"), 
+                      measure.vars = c("body_mass_g"))
+
+# Create the faceted boxplot
+
+## Species and sex vs body mass
+
+boxplot_species_sex = ggplot(penguin_data.m, aes(x = species, y = value, fill = species)) +
+  geom_boxplot() +
+  facet_wrap(~sex) +  # Facet by sex
+  labs(title = "Body Mass Distribution by Species and Sex",
+       x = "Species",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+boxplot_species_sex
+
+
+## Species and sex vs bill length
+
+## Melt data again to make the variable bill length 
+
+penguin_data.m = melt(penguin_data, id.vars = c("species", "sex"), 
+                      measure.vars = c("bill_length_mm"))
+
+boxplot_species_sex = ggplot(penguin_data.m, aes(x = species, y = value, fill = species)) +
+  geom_boxplot() +
+  facet_wrap(~sex) +  # Facet by sex
+  labs(title = "Bill length Distribution by Species and Sex",
+       x = "Species",
+       y = "Bill length (mm)") +
+  theme_minimal()
+
+boxplot_species_sex
+
+
+## Species and sex vs bill depth
+
+## Melt data again to make the variable bill depth 
+
+penguin_data.m = melt(penguin_data, id.vars = c("species", "sex"), 
+                      measure.vars = c("bill_depth_mm"))
+
+boxplot_species_sex = ggplot(penguin_data.m, aes(x = species, y = value, fill = species)) +
+  geom_boxplot() +
+  facet_wrap(~sex) +  # Facet by sex
+  labs(title = "Bill depth Distribution by Species and Sex",
+       x = "Species",
+       y = "Bill depth (mm)") +
+  theme_minimal()
+
+boxplot_species_sex
+
+
+## Species and sex vs bill depth
+
+## Melt data again to make the variable bill depth 
+
+penguin_data.m = melt(penguin_data, id.vars = c("species", "sex"), 
+                      measure.vars = c("flipper_length_mm"))
+
+boxplot_species_sex = ggplot(penguin_data.m, aes(x = species, y = value, fill = species)) +
+  geom_boxplot() +
+  facet_wrap(~sex) +  # Facet by sex
+  labs(title = "Flipper length Distribution by Species and Sex",
+       x = "Species",
+       y = "Flipper length (mm)") +
+  theme_minimal()
+
+boxplot_species_sex
+
+
+# < ---- Males have larger physical characteristics across the board
+
+# Correlation analysis
+
+## remove year
+
+penguin_data_cor = penguin_data[,-8]
+
+
+## Correlation analysis plots
+
+penguin_data_cor %>%
+  select(where(is.numeric)) %>%
+  GGally::ggpairs()
+
+
+## Does the island change body mass averaging across species?
+
+boxplot_island = ggplot(penguin_data, aes(x = island, y = body_mass_g, fill = island)) +
+  geom_boxplot() +
+  labs(title = "Body Mass Distribution Across Islands",
+       x = "Island",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+boxplot_island #<--- it seems like island has a factor but is that  because of species distribution?
+
+
+## What about when you single out species?
+
+## separate by species 
+
+### Adelie
+
+adelie_data = subset(penguin_data_cor, species == "Adelie")
+
+
+## Plot
+
+boxplot_island_adelie = ggplot(adelie_data, aes(x = island, y = body_mass_g, fill = island)) +
+  geom_boxplot() +
+  labs(title = "Body Mass Distribution Across Islands",
+       x = "Island",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+boxplot_island_adelie
+
+
+### Chinstrap
+
+chin_data = subset(penguin_data_cor, species == "Chinstrap")
+
+
+## Plot
+
+boxplot_island_chin = ggplot(chin_data, aes(x = island, y = body_mass_g, fill = island)) +
+  geom_boxplot() +
+  labs(title = "Body Mass Distribution Across Islands",
+       x = "Island",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+boxplot_island_chin
+
+
+### Gentoo
+
+gentoo_data = subset(penguin_data_cor, species == "Gentoo")
+
+
+## Plot
+
+boxplot_island_gentoo = ggplot(gentoo_data, aes(x = island, y = body_mass_g, fill = island)) +
+  geom_boxplot() +
+  labs(title = "Body Mass Distribution Across Islands",
+       x = "Island",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+boxplot_island_gentoo # < --- Gentoo only appears in biscoe which also happens to be the heaviest bird
+
+
+
+# ANOVA analysis to identify if there are differences in body mass accross species and sex
+
+anova_result = aov(body_mass_g ~ species * sex, data = penguin_data)
+anova_analysis = summary(anova_result)
+
+
+# Cluster analysis to see if penguins cluster together based on bill length and body mass coloured by species
+
+# Select numerical columns for clustering and scale
+penguin.s = scale(penguin_data_cor %>% select(where(is.numeric), -species))
+
+# Perform k-means clustering
+set.seed(123)
+kmeans_result = kmeans(penguin.s, centers = 3)
+
+# Add cluster labels to the dataset
+penguin_data_cor$cluster = as.factor(kmeans_result$cluster)
+
+# Visualize clusters
+ggplot_cluster = ggplot(penguin_data_cor, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point() +
+  labs(title = "Species Clusters Based on Bill Length and Body Mass",
+       x = "Bill Length (mm)",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+ggplot_cluster
+
+
+
+# < --- is the clustering more disticnt when you only include males?
+
+## Subset data to only include males and scale numerical values
+
+penguin_male_cor = subset(penguin_data_cor, sex == "male")
+penguin_male_cor.s = scale(penguin_male_cor %>% select(where(is.numeric), - species))
+
+
+# Perform k-means clustering
+set.seed(123)
+kmeans_result = kmeans(penguin_male.s, centers = 3)
+
+# Add cluster labels to the dataset
+
+penguin_male_cor$cluster = as.factor(kmeans_result$cluster)
+
+# Visualize clusters
+ggplot_cluster = ggplot(penguin_male_cor, aes(x = bill_length_mm, y = body_mass_g, color = species)) +
+  geom_point() +
+  labs(title = "Species Clusters Based on Bill Length and Body Mass Only in males",
+       x = "Bill Length (mm)",
+       y = "Body Mass (g)") +
+  theme_minimal()
+
+ggplot_cluster
+
+
+# Visualize clusters of the two most important variables, bill length and flipper length
+
+ggplot_cluster = ggplot(penguin_data_cor, aes(x = bill_length_mm, y = flipper_length_mm, color = species)) +
+  geom_point() +
+  labs(title = "Species Clusters Based on Bill Length and Flipper Length",
+       x = "Bill Length (mm)",
+       y = "Flipper Length (mm)") +
+  theme_minimal()
+
+ggplot_cluster
+
+
+# Predictive model 1
+
+# Prepare data
+
+## Separate training and test data
+## THIS DATA IS TO BE USED FOR ALL MODELS, EXCEPT MALE ONLY MODEL TO MAKE COMPARISONS FAIR
+
+train_index = createDataPartition(penguin_data$species, p = 0.8, list = FALSE)
+train_data = penguin_data_cor[train_index, ]
+test_data = penguin_data_cor[-train_index, ]
+
+
+## Make sure data is a factor before training
+
+train_data$species = factor(train_data$species)
+test_data$species = factor(test_data$species)
+
+# Train a decision tree model
+model = train(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g,
+               data = train_data, method = "rpart")
+
+# Predict on test data
+predictions = predict(model, test_data)
+
+# Evaluate accuracy
+confusionMatrix(predictions, test_data$species)
+
+
+# Plot success of predictive model
+
+
+## Create confusion matrix
+conf_pm1 = confusionMatrix(predictions, test_data$species)
+
+## Convert to a dataframe for plotting
+conf_df = as.data.frame(conf_pm1$table)
+
+## Plot confusion matrix as a heatmap
+ggplot_heatmap_pm1 = ggplot(conf_df, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white", size = 5) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Confusion Matrix Heatmap",
+       x = "Actual Species",
+       y = "Predicted Species") +
+  theme_minimal()
+
+ggplot_heatmap_pm1 #<-- Adelie and Gentoo almost always perfectly predicted but chinstraps often misidentified likley due to smaller sample size
+
+
+
+# Predictive model using only the male data which appears to be more distinct, however with less data points 
+
+# Prepare data
+
+## Separate training and test data
+
+train_index_male = createDataPartition(penguin_male_cor$species, p = 0.8, list = FALSE)
+train_data_male = penguin_male_cor[train_index_male, ]
+test_data_male = penguin_male_cor[-train_index_male, ]
+
+
+## Make sure data is a factor before training
+
+train_data_male$species = factor(train_data_male$species)
+test_data_male$species = factor(test_data_male$species)
+
+# Train a decision tree model
+model_male = train(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g,
+              data = train_data_male, method = "rpart")
+
+# Predict on test data
+predictions_male = predict(model_male, test_data_male)
+
+# Evaluate accuracy
+confusionMatrix(predictions_male, test_data_male$species)
+
+
+# Plot success of predictive model
+
+## Create confusion matrix
+conf_matrix_male = confusionMatrix(predictions_male, test_data_male$species)
+
+## Convert to a dataframe for plotting
+conf_df_male = as.data.frame(conf_matrix_male$table)
+
+## Plot confusion matrix as a heatmap
+ggplot_heatmap_male = ggplot(conf_df_male, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white", size = 5) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Confusion Matrix Heatmap",
+       x = "Actual Species",
+       y = "Predicted Species") +
+  theme_minimal()
+
+ggplot_heatmap_male # < ---- Having both males and females in the data makes the predictive model less accurate 
+
+
+
+# Predictive models which takes into account sex as a predictor 
+
+
+## Prediction model 2 predicts species directly but uses sex as a factor
+
+
+## Make sure data is a factor before training
+
+train_data$species = factor(train_data$species)
+test_data$species = factor(test_data$species)
+train_data$species = factor(train_data$species)
+train_data$sex = factor(train_data$sex)
+test_data$species = factor(test_data$species)
+test_data$sex = factor(test_data$sex)
+
+# Train model with sex included
+species_model_with_sex = train(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g + sex,
+                                data = train_data, method = "rpart")
+
+# Predict species
+species_predictions_with_sex = predict(species_model_with_sex, test_data)
+
+# Evaluate accuracy
+confusionMatrix(species_predictions_with_sex, test_data$species)
+
+
+
+## Create confusion matrix
+conf_pm2 = confusionMatrix(species_predictions_with_sex, test_data$species)
+
+## Convert to a dataframe for plotting
+conf_df_pm2 = as.data.frame(conf_pm2$table)
+
+## Plot confusion matrix as a heatmap
+ggplot_heatmap_pm2 = ggplot(conf_df_pm2, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white", size = 5) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Confusion Matrix Heatmap",
+       x = "Actual Species",
+       y = "Predicted Species") +
+  theme_minimal()
+
+ggplot_heatmap_pm2
+
+
+## Prediction model 3 first predicts sex then uses that to refine its species prediction
+
+
+# Ensure species and sex are factors
+train_data$species = factor(train_data$species)
+train_data$sex = factor(train_data$sex)
+test_data$species = factor(test_data$species)
+test_data$sex = factor(test_data$sex, levels = levels(train_data$sex))
+
+# Step 1: Train model to predict sex
+sex_model = train(sex ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g,
+                   data = train_data, method = "rpart")
+
+# Step 2: Predict sex for both training and test data
+train_data$predicted_sex = predict(sex_model, train_data)
+test_data$predicted_sex = predict(sex_model, test_data)
+
+# Ensure predicted_sex is a factor with matching levels
+train_data$predicted_sex = factor(train_data$predicted_sex, levels = levels(train_data$sex))
+test_data$predicted_sex = factor(test_data$predicted_sex, levels = levels(train_data$sex))
+
+# Step 3: Train species model using predicted sex
+species_model_with_predicted_sex = train(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g + predicted_sex,
+                                          data = train_data, method = "rpart")
+
+# Step 4: Predict species
+species_predictions_with_predicted_sex = predict(species_model_with_predicted_sex, test_data)
+
+# Step 5: Evaluate accuracy
+confusionMatrix(species_predictions_with_predicted_sex, test_data$species)
+
+
+## Create confusion matrix
+conf_pm3 = confusionMatrix(species_predictions_with_predicted_sex, test_data$species)
+
+## Convert to a dataframe for plotting
+conf_df_pm3 = as.data.frame(conf_pm3$table)
+
+## Plot confusion matrix as a heatmap
+ggplot_heatmap_pm3 = ggplot(conf_df_pm3, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), color = "white", size = 5) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") +
+  labs(title = "Confusion Matrix Heatmap",
+       x = "Actual Species",
+       y = "Predicted Species") +
+  theme_minimal()
+
+ggplot_heatmap_pm3
+
+
+
+### BUT WHICH IS THE BEST???
+
+# COMPARE ACCURACY
+
+# Extract accuracy metrics for each model
+accuracy_no_sex = conf_pm1$overall["Accuracy"]
+accuracy_with_sex = conf_pm2$overall["Accuracy"]
+accuracy_predicted_sex = conf_pm3$overall["Accuracy"]
+
+# Print accuracy results
+print(data.frame(
+  Model = c("No Sex Factor", "Sex as Factor", "Predicted Sex First"),
+  Accuracy = c(accuracy_no_sex, accuracy_with_sex, accuracy_predicted_sex)
+))
+
+## < --- Accuracy appears to be identical in all three models
+
+varImp(species_model_with_sex) ## < --- This shows that sex has 0 impact on the classification, this may be due to the simplicity of rpart prediction
+
+
+## Random forest model
+
+## First model ignores sex as a factor 
+
+
+# Ensure species is a factor
+train_data$species = factor(train_data$species)
+test_data$species = factor(test_data$species)
+
+# Train Random Forest model (without sex)
+species_model_rf_no_sex = train(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g,
+                                 data = train_data, method = "rf")
+
+# Predict species
+species_predictions_rf_no_sex = predict(species_model_rf_no_sex, test_data)
+
+# Evaluate accuracy
+conf_rf_no_sex = confusionMatrix(species_predictions_rf_no_sex, test_data$species)
+
+
+
+
+## Prediction model 2 predicts species directly but uses sex as a factor
+
+
+# Ensure sex is a factor
+train_data$sex = factor(train_data$sex)
+test_data$sex = factor(test_data$sex, levels = levels(train_data$sex))
+
+# Train Random Forest model (with sex)
+species_model_rf_with_sex = train(species ~ bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g + sex,
+                                   data = train_data, method = "rf")
+
+# Predict species
+species_predictions_rf_with_sex = predict(species_model_rf_with_sex, test_data)
+
+# Evaluate accuracy
+conf_rf_with_sex = confusionMatrix(species_predictions_rf_with_sex, test_data$species)
+
+
+
+# Compare accuracy
+
+## No sex accuracy
+print(conf_rf_no_sex$overall["Accuracy"])
+
+## Sex accuracy
+print(conf_rf_with_sex$overall["Accuracy"])
+
+# CONCLUSIONS
+
+## < --- Random forest model is marginally better at predicting species than rpart but sex has absolutely no effect on either models prediction power
